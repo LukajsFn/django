@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Slot 3x4</title>
+
+<style>
+body {
+    background: #0d0d0d;
+    color: white;
+    font-family: Arial;
+    text-align: center;
+}
+
+h1 {
+    color: gold;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 80px);
+    grid-template-rows: repeat(3, 80px);
+    gap: 5px;
+    justify-content: center;
+    margin: 20px;
+}
+
+.cell {
+    background: #111;
+    border: 2px solid gold;
+    font-size: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.controls button {
+    margin: 5px;
+    padding: 10px 15px;
+    font-size: 16px;
+    background: gold;
+    border: none;
+    cursor: pointer;
+}
+
+.info {
+    margin: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎰 Slot 3x4</h1>
+
+<div class="info">
+    Credit: <span id="credit">300</span> |
+    Bet: <span id="bet">10</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="controls">
+    <button onclick="changeBet(-5)">- Bet</button>
+    <button onclick="changeBet(5)">+ Bet</button>
+    <br>
+    <button onclick="spin()">SPIN</button>
+</div>
+
+<p id="result"></p>
+
+<script>
+let credit = 300;
+let bet = 10;
+
+const symbols = [
+    { icon: "🍒", multi: 2 },
+    { icon: "🍋", multi: 6 },
+    { icon: "🍇", multi: 9 },
+    { icon: "🔔", multi: 20 },
+    { icon: "💎", multi: 100 },
+];
+
+const WILD = "⭐";
+
+// vytvoření gridu
+const grid = document.getElementById("grid");
+let cells = [];
+
+for (let i = 0; i < 12; i++) {
+    let div = document.createElement("div");
+    div.className = "cell";
+    div.textContent = "❓";
+    grid.appendChild(div);
+    cells.push(div);
+}
+
+function updateUI() {
+    document.getElementById("credit").textContent = credit;
+    document.getElementById("bet").textContent = bet;
+}
+
+function changeBet(amount) {
+    bet += amount;
+    if (bet < 5) bet = 5;
+    if (bet > 100) bet = 100;
+    updateUI();
+}
+
+function randomSymbol() {
+    // 10% šance na WILD
+    if (Math.random() < 0.1) return WILD;
+    return symbols[Math.floor(Math.random() * symbols.length)].icon;
+}
+
+function spin() {
+    if (credit < bet) {
+        alert("Nemáš dost creditu!");
+        return;
+    }
+
+    credit -= bet;
+
+    let resultGrid = [];
+
+    for (let i = 0; i < 12; i++) {
+        let sym = randomSymbol();
+        resultGrid.push(sym);
+        cells[i].textContent = sym;
+    }
+
+    let win = calculateWin(resultGrid);
+
+    let hasWildCombo = checkWildConnection(resultGrid);
+
+    if (hasWildCombo) {
+        document.getElementById("result").textContent = "⭐ RESPIN!";
+        setTimeout(() => respin(resultGrid), 800);
+    } else {
+        finish(win);
+    }
+}
+
+function calculateWin(grid) {
+    let counts = {};
+
+    grid.forEach(s => {
+        if (s !== WILD) {
+            counts[s] = (counts[s] || 0) + 1;
+        }
+    });
+
+    let win = 0;
+
+    for (let icon in counts) {
+        if (counts[icon] >= 4) {
+            let sym = symbols.find(s => s.icon === icon);
+            win += bet * sym.multi;
+        }
+    }
+
+    return win;
+}
+
+// jednoduchá kontrola: alespoň 2 wild vedle sebe
+function checkWildConnection(grid) {
+    for (let i = 0; i < grid.length; i++) {
+        if (grid[i] === WILD) {
+            if (grid[i+1] === WILD || grid[i+4] === WILD) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function respin(oldGrid) {
+    let newGrid = [...oldGrid];
+
+    for (let i = 0; i < newGrid.length; i++) {
+        if (newGrid[i] !== WILD) {
+            newGrid[i] = randomSymbol();
+        }
+        cells[i].textContent = newGrid[i];
+    }
+
+    let win = calculateWin(newGrid);
+    finish(win);
+}
+
+function finish(win) {
+    if (win > 0) {
+        document.getElementById("result").textContent = "Výhra: +" + win;
+    } else {
+        document.getElementById("result").textContent = "Prohra 😢";
+    }
+
+    credit += win;
+    updateUI();
+}
+
+updateUI();
+</script>
+
+</body>
+</html>
